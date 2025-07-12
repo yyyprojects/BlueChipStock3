@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>An Interactive Guide to Blue-Chip Stocks</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals - A calming and professional palette using beige, slate, and subtle blues to foster a sense of trust and clarity, ideal for financial topics. -->
+    <!-- Application Structure Plan: The SPA is designed as a narrative journey for a novice investor. It starts with the basic "What" (Hero Section), moves to the "Why" (Characteristics & Pros/Cons), shows the "Who" (Interactive Company Explorer & Chart), places them in "Context" (Comparison Tool), proves their "Resilience" (Timeline), and finally offers "Next Steps" (Resources). This thematic flow is more intuitive for learning than the report's original linear structure. Key interactions include filtering companies by sector, which dynamically updates a bar chart, and clicking on cards/timeline points to reveal information, fostering active exploration over passive reading. -->
+    <!-- Visualization & Content Choices: 1. Core Concepts -> Interactive Cards -> Goal: Break down complex info into digestible, clickable chunks for better retention. Method: HTML/CSS/JS. 2. Company Examples -> Filterable Logo Grid + Bar Chart -> Goal: Make abstract data (market cap) tangible and comparable. Interaction: Filter by sector to update the chart. Library: Chart.js for its responsiveness and ease of dynamic data updates. 3. Stock Type Comparison -> Tabbed Interface -> Goal: Allow direct, side-by-side comparison of Blue-Chip, Growth, and Value stocks. Method: JS to show/hide content panels. 4. Historical Resilience -> Vertical Timeline -> Goal: Visualize endurance over time in a more engaging way than a simple table. Interaction: Click events on timeline nodes. Method: HTML/CSS/JS. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f5f4; /* Warm Neutral: stone-100 */
+            color: #1c1917; /* Warm Neutral: stone-900 */
+        }
+        .nav-link {
+            transition: color 0.3s ease, border-bottom-color 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #3b82f6; /* Accent: blue-500 */
+            border-bottom-color: #3b82f6;
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .timeline {
+            position: relative;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .timeline::after {
+            content: '';
+            position: absolute;
+            width: 6px;
+            background-color: #d6d3d1; /* stone-300 */
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            margin-left: -3px;
+        }
+        .timeline-container {
+            padding: 10px 40px;
+            position: relative;
+            background-color: inherit;
+            width: 50%;
+        }
+        .timeline-container::after {
+            content: '';
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            right: -17px;
+            background-color: white;
+            border: 4px solid #3b82f6; /* blue-500 */
+            top: 15px;
+            border-radius: 50%;
+            z-index: 1;
+        }
+        .left {
+            left: 0;
+        }
+        .right {
+            left: 50%;
+        }
+        .left::before {
+            content: " ";
+            height: 0;
+            position: absolute;
+            top: 22px;
+            width: 0;
+            z-index: 1;
+            right: 30px;
+            border: medium solid white;
+            border-width: 10px 0 10px 10px;
+            border-color: transparent transparent transparent white;
+        }
+        .right::before {
+            content: " ";
+            height: 0;
+            position: absolute;
+            top: 22px;
+            width: 0;
+            z-index: 1;
+            left: 30px;
+            border: medium solid white;
+            border-width: 10px 10px 10px 0;
+            border-color: transparent white transparent transparent;
+        }
+        .right::after {
+            left: -16px;
+        }
+        @media screen and (max-width: 768px) {
+            .timeline::after {
+                left: 31px;
+            }
+            .timeline-container {
+                width: 100%;
+                padding-left: 70px;
+                padding-right: 25px;
+            }
+            .timeline-container::before {
+                left: 60px;
+                border: medium solid white;
+                border-width: 10px 10px 10px 0;
+                border-color: transparent white transparent transparent;
+            }
+            .left::after, .right::after {
+                left: 15px;
+            }
+            .right {
+                left: 0%;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Header & Navigation -->
+    <header class="bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-xl font-bold text-blue-600">InvestEd</span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#definition" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">What is a Blue Chip?</a>
+                        <a href="#characteristics" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">Characteristics</a>
+                        <a href="#pros-cons" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">Pros & Cons</a>
+                        <a href="#examples" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">Examples</a>
+                        <a href="#comparison" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">Comparison</a>
+                        <a href="#resilience" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-gray-700">Resilience</a>
+                    </div>
+                </div>
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white">
+                        <span class="sr-only">Open main menu</span>
+                        <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </nav>
+        <div id="mobile-menu" class="md:hidden hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="#definition" class="nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-700">What is a Blue Chip?</a>
+                <a href="#characteristics" class="nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-700">Characteristics</a>
+                <a href="#pros-cons" class="nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-700">Pros & Cons</a>
+                <a href="#examples" class="nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-700">Examples</a>
+                <a href="#comparison" class="nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-700">Comparison</a>
+                <a href="#resilience" class="nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-700">Resilience</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+
+        <!-- Section 1: Definition -->
+        <section id="definition" class="text-center scroll-mt-20">
+            <h1 class="text-4xl md:text-5xl font-bold text-slate-800 mb-4">What is a Blue-Chip Stock?</h1>
+            <p class="max-w-3xl mx-auto text-lg text-slate-600 mb-6">In simple terms, a blue-chip stock is a share of a very large, well-known, and financially sound company. The name comes from poker, where blue chips are the most valuable. These companies are leaders in their industries and have a long history of reliable performance, even during tough economic times.</p>
+            <div class="flex justify-center items-center space-x-4">
+                <div class="w-12 h-12 md:w-16 md:h-16 bg-red-400 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg">Low</div>
+                <div class="w-12 h-12 md:w-16 md:h-16 bg-white border-2 border-gray-300 rounded-full flex items-center justify-center text-gray-700 font-bold text-sm shadow-lg">Mid</div>
+                <div class="w-16 h-16 md:w-20 md:h-20 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-xl ring-4 ring-blue-500/30">High Value</div>
+            </div>
+        </section>
+
+        <!-- Section 2: Characteristics -->
+        <section id="characteristics" class="py-16 md:py-24 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center text-slate-800 mb-4">The Anatomy of a Blue Chip</h2>
+            <p class="text-center text-slate-600 mb-12 max-w-2xl mx-auto">Blue-chip stocks share several key traits that signal their strength and reliability. Explore the characteristics below to understand what sets these companies apart. Click on each card to learn more about its significance for investors.</p>
+            <div id="characteristics-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            </div>
+        </section>
+
+        <!-- Section 3: Pros & Cons -->
+        <section id="pros-cons" class="py-16 md:py-24 bg-white rounded-2xl scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center text-slate-800 mb-4">The Investor's Dilemma: Pros & Cons</h2>
+            <p class="text-center text-slate-600 mb-12 max-w-2xl mx-auto">Like any investment, blue-chip stocks have both advantages and potential downsides. Understanding this trade-off is crucial for building a balanced portfolio that aligns with your financial goals.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+                <div id="advantages-list" class="space-y-4">
+                    <h3 class="text-2xl font-semibold text-green-600 flex items-center"><span class="text-3xl mr-3">👍</span>Advantages</h3>
+                </div>
+                <div id="disadvantages-list" class="space-y-4">
+                    <h3 class="text-2xl font-semibold text-red-600 flex items-center"><span class="text-3xl mr-3">👎</span>Disadvantages</h3>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Section 4: Examples & Market Cap -->
+        <section id="examples" class="py-16 md:py-24 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center text-slate-800 mb-4">Meet the Blue Chips</h2>
+            <p class="text-center text-slate-600 mb-8 max-w-3xl mx-auto">Blue chips are household names that span across various sectors of the economy. Below, you can explore some prominent examples. Use the filters to see companies by industry and compare their massive market capitalizations in the chart. Hover over a logo to see company details.</p>
+            <div id="sector-filters" class="flex flex-wrap justify-center gap-2 mb-8">
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div id="company-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
+                </div>
+                <div class="chart-container">
+                    <canvas id="marketCapChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Comparison -->
+        <section id="comparison" class="py-16 md:py-24 bg-white rounded-2xl scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center text-slate-800 mb-4">How Do They Compare?</h2>
+            <p class="text-center text-slate-600 mb-8 max-w-2xl mx-auto">Blue chips are just one type of stock. Understanding how they differ from Growth and Value stocks is key to building a diversified portfolio. Select a stock type to see its defining profile.</p>
+            <div class="flex justify-center mb-8">
+                <div id="comparison-tabs" class="flex space-x-1 bg-slate-200 p-1 rounded-full">
+                </div>
+            </div>
+            <div id="comparison-content" class="max-w-4xl mx-auto p-6 bg-slate-50 rounded-lg transition-opacity duration-300">
+            </div>
+        </section>
+
+        <!-- Section 6: Resilience Timeline -->
+        <section id="resilience" class="py-16 md:py-24 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-center text-slate-800 mb-4">Resilience Through Time</h2>
+            <p class="text-center text-slate-600 mb-12 max-w-2xl mx-auto">A key feature of blue-chip stocks is their ability to weather economic storms. This interactive timeline highlights their performance during major US recessions, demonstrating their role as a stabilizing force for investors.</p>
+            <div id="timeline-container" class="timeline">
+            </div>
+        </section>
+        
+    </main>
+    
+    <!-- Footer -->
+    <footer class="bg-slate-800 text-slate-300">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="font-bold text-lg text-white mb-4">About InvestEd</h3>
+                    <p class="text-sm">This interactive guide was created to make complex financial topics like blue-chip stocks accessible and easy to understand for everyone. Information is based on the "Understanding Blue-Chip Stocks in the United States" report.</p>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg text-white mb-4">Further Learning</h3>
+                    <ul id="learning-links" class="space-y-2 text-sm">
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg text-white mb-4">Disclaimer</h3>
+                    <p class="text-sm">This content is for informational and educational purposes only. It is not intended to be investment advice. Please consult with a qualified professional before making any financial decisions.</p>
+                </div>
+            </div>
+            <div class="mt-8 border-t border-slate-700 pt-8 text-center text-sm">
+                <p>&copy; 2025 InvestEd. All Rights Reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const data = {
+                characteristics: [
+                    { title: "Large Market Cap", icon: "🏢", content: "Typically valued at billions or even trillions of dollars, indicating financial stability and a dominant market presence." },
+                    { title: "Industry Leadership", icon: "🏆", content: "Often the #1 or #2 player in their field, with strong competitive advantages that protect their market share." },
+                    { title: "Long Track Record", icon: "📜", content: "A history of consistent profitability and success through many years and different economic cycles." },
+                    { title: "Consistent Dividends", icon: "💰", content: "A history of regularly paying out a portion of profits to shareholders, providing a steady income stream." },
+                    { title: "Strong Financials", icon: "🏦", content: "Healthy balance sheets with manageable debt and strong cash flow, allowing them to withstand economic pressure." },
+                    { title: "Brand Recognition", icon: "🌟", content: "Household names with powerful brands that foster deep customer trust and loyalty." },
+                    { title: "Global Presence", icon: "🌍", content: "Operations across the globe, which diversifies their revenue and reduces dependence on a single economy." },
+                    { title: "Index Component", icon: "📊", content: "Almost always included in major market indices like the S&P 500 or Dow Jones Industrial Average." }
+                ],
+                prosCons: {
+                    advantages: [
+                        { title: "Stability & Lower Risk", content: "Their size and financial health make them less volatile than smaller companies, offering a safer investment experience." },
+                        { title: "Reliable Returns", content: "While not explosive, they offer steady long-term growth and capital appreciation." },
+                        { title: "Consistent Dividend Income", content: "Provide a regular income stream, which can be reinvested or used as cash, and helps protect against inflation." },
+                        { title: "Capital Preservation", content: "Ideal for conservative investors or those near retirement who want to protect their principal investment." },
+                        { title: "High Liquidity", content: "Easy to buy and sell quickly without significantly affecting the stock's price." },
+                    ],
+                    disadvantages: [
+                        { title: "Lower Growth Potential", content: "Their massive size means the phase of rapid, explosive growth is usually over." },
+                        { title: "Higher Valuations", content: "Their reputation means they often trade at a premium, making them relatively more expensive to buy." },
+                        { title: "Slower to Adapt", content: "Large organizations can be less agile and slower to respond to disruptive market changes." },
+                        { title: "Not Immune to Failure", content: "Blue-chip status is not permanent. Even giants can fall, as seen with companies like Kodak and Sears." },
+                    ]
+                },
+                companies: [
+                    { name: "NVIDIA", ticker: "NVDA", sector: "Technology", marketCap: 3445.8, logo: "NVIDIA", why: "Pioneer in AI and leading GPU manufacturer." },
+                    { name: "Microsoft", ticker: "MSFT", sector: "Technology", marketCap: 3441, logo: "Microsoft", why: "Global leader in software and cloud computing." },
+                    { name: "Apple", ticker: "AAPL", sector: "Technology", marketCap: 3036, logo: "Apple", why: "Iconic brand in consumer electronics with a loyal ecosystem." },
+                    { name: "Amazon", ticker: "AMZN", sector: "Consumer", marketCap: 2183.9, logo: "Amazon", why: "Dominant force in e-commerce and cloud services (AWS)." },
+                    { name: "Alphabet (Google)", ticker: "GOOGL", sector: "Technology", marketCap: 2024.9, logo: "Alphabet", why: "Leader in online search and digital advertising." },
+                    { name: "Walmart", ticker: "WMT", sector: "Consumer", marketCap: 799.9, logo: "Walmart", why: "America's largest retailer with consistent consumer demand." },
+                    { name: "JPMorgan Chase", ticker: "JPM", sector: "Financials", marketCap: 740, logo: "JPMorgan", why: "Largest US bank with resilient, diversified operations." },
+                    { name: "Johnson & Johnson", ticker: "JNJ", sector: "Healthcare", marketCap: 375.9, logo: "Johnson & Johnson", why: "Healthcare giant with stable demand for its products." },
+                    { name: "Coca-Cola", ticker: "KO", sector: "Consumer", marketCap: 291.21, logo: "Coca-Cola", why: "Iconic global brand with a long history of dividends." },
+                    { name: "Exxon Mobil", ticker: "XOM", sector: "Energy", marketCap: 490.8, logo: "ExxonMobil", why: "Energy bellwether with large-scale, integrated operations." }
+                ],
+                comparison: {
+                    'Blue-Chip': {
+                        profile: 'Large, well-established companies known for reliability and consistent performance.',
+                        growth: 'Steady, long-term appreciation rather than explosive gains.',
+                        dividends: 'Typically pay regular, increasing dividends, providing stable income.',
+                        risk: 'Lower risk and less volatile, considered a "safe haven" during downturns.'
+                    },
+                    'Growth': {
+                        profile: 'Companies expected to grow earnings faster than the market average, often in tech or biotech.',
+                        growth: 'High potential for significant capital appreciation is the primary goal.',
+                        dividends: 'Rarely pay dividends, as profits are reinvested for aggressive expansion.',
+                        risk: 'Higher risk and more volatile due to unproven models and high expectations.'
+                    },
+                    'Value': {
+                        profile: 'Stocks trading at a price below their intrinsic or book value, seen as "bargains".',
+                        growth: 'Capital appreciation is expected as the market corrects the undervaluation.',
+                        dividends: 'Often pay dividends, as they are typically mature companies.',
+                        risk: 'Less risky than growth stocks, but can underperform if the market doesn\'t recognize their value.'
+                    }
+                },
+                resilience: [
+                     { year: "The Great Depression (1929-1939)", side: "left", content: "Companies selling essential products, like Coca-Cola and Procter & Gamble, demonstrated remarkable endurance and survived the massive market crash." },
+                     { year: "Dot-com Bubble Burst (2000-2002)", side: "right", content: "While tech stocks collapsed, traditional blue chips like Pfizer and PepsiCo remained stable, providing a safe harbor for investors." },
+                     { year: "2008 Financial Crisis", side: "left", content: "Firms like Johnson & Johnson and Walmart showed resilience. Their stock prices recovered faster and reached new highs in the following years." },
+                     { year: "COVID-19 Recession (2020)", side: "right", content: "Tech blue chips like Apple and Amazon not only endured the downturn but saw substantial growth due to accelerated digital transformation." }
+                ],
+                learningLinks: [
+                    { name: "SEC.gov (Investor Education)", url: "https://www.investor.gov/" },
+                    { name: "FINRA Foundation", url: "https://www.finrafoundation.org/" },
+                    { name: "MyMoney.gov", url: "https://www.mymoney.gov/" },
+                    { name: "Consumer Financial Protection Bureau", url: "https://www.consumerfinance.gov/" }
+                ]
+            };
+            
+            const createLogoSVG = (name) => {
+                const colors = {
+                    'NVIDIA': '#76B900', 'Microsoft': '#F25022', 'Apple': '#A3AAAE', 'Amazon': '#FF9900',
+                    'Alphabet': '#4285F4', 'Walmart': '#0071CE', 'JPMorgan': '#5E99C3', 
+                    'Johnson & Johnson': '#D00000', 'Coca-Cola': '#F40009', 'ExxonMobil': '#D91F26'
+                };
+                const color = colors[name] || '#4B5563';
+                return `<div class="h-16 w-16 md:h-20 md:w-20 flex items-center justify-center bg-white rounded-lg shadow-md p-2 transition-transform duration-300 group-hover:scale-110">
+                            <span class="font-bold text-center text-xs" style="color:${color}">${name.replace(' ', '<br>')}</span>
+                        </div>`;
+            };
+
+            const characteristicsGrid = document.getElementById('characteristics-grid');
+            data.characteristics.forEach(char => {
+                const card = document.createElement('div');
+                card.className = 'card p-6 text-center cursor-pointer';
+                card.innerHTML = `
+                    <div class="text-5xl mb-4">${char.icon}</div>
+                    <h3 class="text-xl font-semibold text-slate-800 mb-2">${char.title}</h3>
+                    <p class="text-slate-500 text-sm opacity-0 h-0 transition-all duration-300">${char.content}</p>
+                `;
+                characteristicsGrid.appendChild(card);
+                card.addEventListener('click', () => {
+                    card.querySelector('p').classList.toggle('opacity-0');
+                    card.querySelector('p').classList.toggle('h-0');
+                    card.querySelector('p').classList.toggle('mt-2');
+                });
+            });
+
+            const advantagesList = document.getElementById('advantages-list');
+            data.prosCons.advantages.forEach(item => {
+                advantagesList.innerHTML += `
+                    <div class="card p-5">
+                        <h4 class="font-semibold text-slate-800">${item.title}</h4>
+                        <p class="text-slate-600 text-sm">${item.content}</p>
+                    </div>`;
+            });
+            
+            const disadvantagesList = document.getElementById('disadvantages-list');
+            data.prosCons.disadvantages.forEach(item => {
+                disadvantagesList.innerHTML += `
+                    <div class="card p-5">
+                        <h4 class="font-semibold text-slate-800">${item.title}</h4>
+                        <p class="text-slate-600 text-sm">${item.content}</p>
+                    </div>`;
+            });
+
+            const companyGrid = document.getElementById('company-grid');
+            const sectorFilters = document.getElementById('sector-filters');
+            const companies = data.companies;
+            const sectors = ['All', ...new Set(companies.map(c => c.sector))];
+            let activeSector = 'All';
+
+            sectors.forEach(sector => {
+                const button = document.createElement('button');
+                button.textContent = sector;
+                button.className = 'px-4 py-2 text-sm font-medium rounded-full transition-colors duration-300';
+                button.dataset.sector = sector;
+                if (sector === activeSector) {
+                    button.classList.add('bg-blue-500', 'text-white');
+                } else {
+                    button.classList.add('bg-white', 'text-slate-700', 'hover:bg-blue-100');
+                }
+                button.addEventListener('click', () => {
+                    activeSector = sector;
+                    renderCompanies();
+                    updateChart();
+                    document.querySelectorAll('#sector-filters button').forEach(btn => {
+                        btn.classList.remove('bg-blue-500', 'text-white');
+                        btn.classList.add('bg-white', 'text-slate-700', 'hover:bg-blue-100');
+                    });
+                    button.classList.add('bg-blue-500', 'text-white');
+                    button.classList.remove('bg-white', 'text-slate-700', 'hover:bg-blue-100');
+                });
+                sectorFilters.appendChild(button);
+            });
+
+            function renderCompanies() {
+                companyGrid.innerHTML = '';
+                const filteredCompanies = activeSector === 'All' ? companies : companies.filter(c => c.sector === activeSector);
+                filteredCompanies.forEach(company => {
+                    const companyEl = document.createElement('div');
+                    companyEl.className = 'relative group flex justify-center items-center';
+                    companyEl.innerHTML = `
+                        ${createLogoSVG(company.name)}
+                        <div class="absolute bottom-full mb-2 w-max max-w-xs p-3 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10">
+                            <h4 class="font-bold">${company.name} ($${company.ticker})</h4>
+                            <p><strong>Mkt Cap:</strong> $${company.marketCap}B</p>
+                            <p>${company.why}</p>
+                            <div class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-8 border-x-transparent border-t-8 border-t-slate-800"></div>
+                        </div>
+                    `;
+                    companyGrid.appendChild(companyEl);
+                });
+            }
+            
+            const ctx = document.getElementById('marketCapChart').getContext('2d');
+            let marketCapChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Market Capitalization (in Billions USD)',
+                        data: [],
+                        backgroundColor: '#60a5fa', // blue-400
+                        borderColor: '#2563eb', // blue-600
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` $${context.raw.toLocaleString()} Billion`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Market Cap (USD Billions)'
+                            }
+                        }
+                    }
+                }
+            });
+
+            function updateChart() {
+                const filteredCompanies = activeSector === 'All' ? companies : companies.filter(c => c.sector === activeSector);
+                marketCapChart.data.labels = filteredCompanies.map(c => c.name);
+                marketCapChart.data.datasets[0].data = filteredCompanies.map(c => c.marketCap);
+                marketCapChart.update();
+            }
+
+            const comparisonTabsContainer = document.getElementById('comparison-tabs');
+            const comparisonContent = document.getElementById('comparison-content');
+            const comparisonTypes = Object.keys(data.comparison);
+            
+            comparisonTypes.forEach(type => {
+                const tab = document.createElement('button');
+                tab.textContent = type;
+                tab.dataset.type = type;
+                tab.className = 'comparison-tab px-5 py-2 text-sm font-semibold rounded-full transition-colors duration-300';
+                comparisonTabsContainer.appendChild(tab);
+            });
+
+            function updateComparisonContent(type) {
+                const contentData = data.comparison[type];
+                comparisonContent.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white p-4 rounded-lg shadow-sm">
+                            <h4 class="font-bold text-slate-700 mb-1">Company Profile</h4>
+                            <p class="text-sm text-slate-600">${contentData.profile}</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm">
+                            <h4 class="font-bold text-slate-700 mb-1">Growth Potential</h4>
+                            <p class="text-sm text-slate-600">${contentData.growth}</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm">
+                            <h4 class="font-bold text-slate-700 mb-1">Dividend Policy</h4>
+                            <p class="text-sm text-slate-600">${contentData.dividends}</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm">
+                            <h4 class="font-bold text-slate-700 mb-1">Risk Profile</h4>
+                            <p class="text-sm text-slate-600">${contentData.risk}</p>
+                        </div>
+                    </div>
+                `;
+                 document.querySelectorAll('.comparison-tab').forEach(t => {
+                    if (t.dataset.type === type) {
+                        t.classList.add('bg-white', 'text-blue-600', 'shadow');
+                        t.classList.remove('text-slate-600');
+                    } else {
+                        t.classList.remove('bg-white', 'text-blue-600', 'shadow');
+                        t.classList.add('text-slate-600');
+                    }
+                });
+            }
+
+            comparisonTabsContainer.addEventListener('click', (e) => {
+                if (e.target.matches('.comparison-tab')) {
+                    updateComparisonContent(e.target.dataset.type);
+                }
+            });
+
+            const timelineEl = document.getElementById('timeline-container');
+            data.resilience.forEach(event => {
+                const item = document.createElement('div');
+                item.className = `timeline-container ${event.side}`;
+                item.innerHTML = `
+                    <div class="card p-4">
+                        <h3 class="font-bold text-blue-600">${event.year}</h3>
+                        <p class="text-sm text-slate-600">${event.content}</p>
+                    </div>
+                `;
+                timelineEl.appendChild(item);
+            });
+
+            const learningLinksContainer = document.getElementById('learning-links');
+            data.learningLinks.forEach(link => {
+                const li = document.createElement('li');
+                li.innerHTML = `<a href="${link.url}" target="_blank" rel="noopener noreferrer" class="hover:text-white hover:underline">${link.name}</a>`;
+                learningLinksContainer.appendChild(li);
+            });
+            
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+            document.querySelectorAll('#mobile-menu a').forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenu.classList.add('hidden');
+                });
+            });
+
+            renderCompanies();
+            updateChart();
+            updateComparisonContent('Blue-Chip');
+        });
+    </script>
+
+</body>
+</html>
